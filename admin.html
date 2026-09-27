@@ -34,7 +34,12 @@
       window.location.replace('/admin-login.html');
     }
     window.__adminToLogin = toLogin;
-    if (typeof window.fetch === 'function') {
+
+    // Not logged in at all -> redirect to login before any dashboard requests fire.
+    if (!stored) { toLogin(); return; }
+
+    function attachFetch() {
+      if (typeof window.fetch !== 'function') return;
       var realFetch = window.fetch.bind(window);
       window.fetch = function (input, init) {
         var url = (typeof input === 'string') ? input : (input && input.url) || '';
@@ -53,10 +58,42 @@
           }
         }
         return realFetch(input, init).then(function (resp) {
-          if (isManage && resp.status === 401) { toLogin(); }
+          if ((isManage || isUpload) && resp.status === 401) {
+            toLogin();
+            return new Promise(function () {});   // stop original .catch() alert from firing
+          }
           return resp;
         });
       };
+    }
+
+    // Pages using jQuery AJAX (admin-waterfall) need the same treatment.
+    function attachJQuery() {
+      if (typeof jQuery === 'undefined' || !jQuery.ajaxSetup) return;
+      jQuery.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+          var url = settings.url || '';
+          if (url.indexOf('/upload') !== -1 && uploadStored) {
+            xhr.setRequestHeader('Authorization', uploadStored);
+          } else if (url.indexOf('api/manage/') !== -1 && stored) {
+            xhr.setRequestHeader('Authorization', stored);
+          }
+        }
+      });
+      jQuery(document).ajaxError(function (_event, xhr) {
+        if (xhr.status === 401) { toLogin(); }
+      });
+    }
+
+    attachFetch();
+    attachJQuery();
+    if (typeof jQuery === 'undefined') {
+      var jqTimer = setInterval(function () {
+        if (typeof jQuery !== 'undefined' && jQuery.ajaxSetup) {
+          attachJQuery();
+          clearInterval(jqTimer);
+        }
+      }, 50);
     }
   })();
   </script>
@@ -359,7 +396,6 @@
         //判断是否需要登录
         .then(response => {
           if (response.status == 401) {
-            alert("请先登录");
             window.location.href = "/admin-login.html";
           }
           else {

@@ -60,7 +60,7 @@ function plainTextHeaders(reason) {
 // Returns an array of { user, pass }. Also reports whether the single-pair
 // binding is partially configured (one set, the other missing) so callers can
 // surface a misconfiguration error.
-function getAllowedUploadCredentials(env) {
+export function getAllowedUploadCredentials(env) {
   const pairs = [];
   const singleUser = env.UPLOAD_BASIC_USER;
   const singlePass = env.UPLOAD_BASIC_PASS;
