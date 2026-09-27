@@ -8,7 +8,46 @@
   <link rel="stylesheet" href="./admin-imgtc.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.3/lib/theme-chalk/index.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
-  <script src="https://js.sentry-cdn.com/219f636ac7bde5edab2c3e16885cb535.min.js" crossorigin="anonymous"></script>
+  <script>
+  (function () {
+    'use strict';
+    var KEY = 'ymy_admin_auth';
+    var UPLOAD_KEY = 'ymy_upload_auth';
+    var stored = null;
+    var uploadStored = null;
+    try { stored = localStorage.getItem(KEY); } catch (e) {}
+    try { uploadStored = localStorage.getItem(UPLOAD_KEY); } catch (e) {}
+    function toLogin() {
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      window.location.replace('/admin-login.html');
+    }
+    window.__adminToLogin = toLogin;
+    if (typeof window.fetch === 'function') {
+      var realFetch = window.fetch.bind(window);
+      window.fetch = function (input, init) {
+        var url = (typeof input === 'string') ? input : (input && input.url) || '';
+        var isManage = url.indexOf('api/manage/') !== -1;
+        var isUpload = url.indexOf('/upload') !== -1;
+        init = init || {};
+        var cred = isManage ? stored : (isUpload ? uploadStored : null);
+        if (cred) {
+          var h = init.headers;
+          if (!h) {
+            init.headers = { 'Authorization': cred };
+          } else if (typeof Headers !== 'undefined' && h instanceof Headers) {
+            if (!h.has('Authorization')) h.set('Authorization', cred);
+          } else if (!('Authorization' in h)) {
+            h['Authorization'] = cred;
+          }
+        }
+        return realFetch(input, init).then(function (resp) {
+          if (isManage && resp.status === 401) { toLogin(); }
+          return resp;
+        });
+      };
+    }
+  })();
+  </script>
 </head>
 <body>
   <div id="app">
@@ -375,7 +414,7 @@
     },
     methods: {
       refreshDashboard() {location.reload();},  // 刷新页面
-      handleLogout() { window.location.href = '/'; },  // 退出登录
+      handleLogout() { try { localStorage.removeItem('ymy_admin_auth'); } catch (e) {} window.location.href = '/admin-login.html'; },  // 退出登录
       handlePageChange(page) { this.currentPage = page; },  // 切换页面
         handleUpload() { this.$refs.fileInput.click(); },  // 打开文件选择对话框
         sort(command) { this.sortOption = command; },  // 切换排序方式
@@ -869,7 +908,7 @@
       this.updateWindowWidth();
       fetch("./api/manage/check", { method: 'GET', credentials: 'include' })
         .then(response => response.text())
-        .then(result => result === "true" ? this.showLogoutButton = true : window.location.href = "./api/manage/login")
+        .then(result => result === "true" ? this.showLogoutButton = true : window.location.href = "/admin-login.html")
         .catch(() => this.$message.error('同步数据时出错，请检查网络连接'));
 
       // 获取文件列表数据

@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="涯木云 - 登录后上传">
+<meta name="description" content="涯木云 - 后台登录">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
-<title>登录 - 涯木云</title>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7114121088728794" crossorigin="anonymous"></script>
+<title>后台登录 - 涯木云</title>
 <style>
 :root {
   --accent: #0297f8;
@@ -113,8 +112,8 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 <div class="page">
   <h2 class="brand">涯木云</h2>
   <div class="card">
-    <h1>登录后上传</h1>
-    <p class="sub">该云盘需要密码才能上传。<br>还没有密码？请联系 <a href="mailto:me@nickyam.com">me@nickyam.com</a> 获取。</p>
+    <h1>后台登录</h1>
+    <p class="sub">该云盘后台需要密码才能访问。<br>还没有密码？请联系 <a href="mailto:me@nickyam.com">me@nickyam.com</a> 获取。</p>
     <form id="login-form">
       <label>用户名<input type="text" id="login-user" autocomplete="username" placeholder="用户名" required></label>
       <label>密码<input type="password" id="login-pass" autocomplete="current-password" placeholder="密码" required></label>
@@ -128,12 +127,12 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 <script>
 (function () {
   'use strict';
-  var UPLOAD_AUTH_KEY = 'ymy_upload_auth';
+  var ADMIN_AUTH_KEY = 'ymy_admin_auth';
 
   function setStoredAuth(value) {
     try {
-      if (value) localStorage.setItem(UPLOAD_AUTH_KEY, value);
-      else localStorage.removeItem(UPLOAD_AUTH_KEY);
+      if (value) localStorage.setItem(ADMIN_AUTH_KEY, value);
+      else localStorage.removeItem(ADMIN_AUTH_KEY);
     } catch (e) {}
   }
 
@@ -173,12 +172,12 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 
     var auth = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + pass)));
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/auth-check');
+    xhr.open('POST', '/api/admin-auth-check');
     xhr.setRequestHeader('Authorization', auth);
     xhr.onload = function () {
       if (xhr.status === 200) {
         setStoredAuth(auth);
-        location.replace('/');
+        location.replace('/admin.html');
       } else {
         var msg = '用户名或密码错误';
         try { var d = JSON.parse(xhr.responseText); if (d && d.error) msg = d.error; } catch (err) {}

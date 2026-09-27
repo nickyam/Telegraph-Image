@@ -1,10 +1,9 @@
 import {
     basicAuthentication,
-    basicAuthChallengeResponse,
     dashboardDisabledResponse,
-    unauthorizedResponse,
+    authenticateDashboardJson,
 } from "../../utils/auth.js";
-import { isEmptyBinding } from "../../utils/http.js";
+import { isEmptyBinding, jsonResponse } from "../../utils/http.js";
 
 async function errorHandling(context) {
     try {
@@ -19,21 +18,9 @@ async function errorHandling(context) {
         return dashboardDisabledResponse();
     }
 
-    if (isEmptyBinding(context.env.BASIC_USER)) {
-        return context.next();
-    }
-
-    if (!context.request.headers.has('Authorization')) {
-        return basicAuthChallengeResponse();
-    }
-
-    const credentials = basicAuthentication(context.request);
-    if (credentials instanceof Response) {
-        return credentials;
-    }
-
-    if (context.env.BASIC_USER !== credentials.user || context.env.BASIC_PASS !== credentials.pass) {
-        return unauthorizedResponse('Invalid credentials.');
+    const result = authenticateDashboardJson(context.request, context.env);
+    if (result) {
+        return result;
     }
 
     return context.next();

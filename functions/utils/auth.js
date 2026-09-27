@@ -29,15 +29,6 @@ export function dashboardDisabledResponse() {
   return textResponse(DASHBOARD_DISABLED_MESSAGE, { status: 200 });
 }
 
-export function basicAuthChallengeResponse() {
-  return textResponse('You need to login.', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': BASIC_AUTH_CHALLENGE,
-    },
-  });
-}
-
 export function unauthorizedResponse(reason) {
   return textResponse(reason, {
     status: 401,
@@ -62,23 +53,55 @@ function plainTextHeaders(reason) {
   };
 }
 
+// Builds the list of allowed upload credentials from env bindings.
+// Supports two sources (both may be used at once):
+//   1. UPLOAD_BASIC_USER + UPLOAD_BASIC_PASS  (single shared account, legacy)
+//   2. UPLOAD_BASIC_CREDENTIALS              (comma-separated "user:pass" pairs)
+// Returns an array of { user, pass }. Also reports whether the single-pair
+// binding is partially configured (one set, the other missing) so callers can
+// surface a misconfiguration error.
+function getAllowedUploadCredentials(env) {
+  const pairs = [];
+  const singleUser = env.UPLOAD_BASIC_USER;
+  const singlePass = env.UPLOAD_BASIC_PASS;
+  const hasUser = !isEmptyBinding(singleUser);
+  const hasPass = !isEmptyBinding(singlePass);
+
+  if (hasUser && hasPass) {
+    pairs.push({ user: singleUser, pass: singlePass });
+  }
+
+  const list = env.UPLOAD_BASIC_CREDENTIALS;
+  if (!isEmptyBinding(list)) {
+    for (const raw of String(list).split(',')) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const idx = trimmed.indexOf(':');
+      if (idx <= 0) continue; // malformed entry (no user or missing colon) -> skip
+      pairs.push({ user: trimmed.slice(0, idx), pass: trimmed.slice(idx + 1) });
+    }
+  }
+
+  return { pairs, hasUser, hasPass };
+}
+
 // JSON variant used by the upload endpoint so the frontend can render a custom
 // login form instead of the browser's native Basic Auth dialog. Returns null
 // when allowed, or a JSON Response (without the WWW-Authenticate header) on
 // failure so no native prompt is triggered.
 export function authenticateUploadJson(request, env) {
-  const hasUser = !isEmptyBinding(env.UPLOAD_BASIC_USER);
-  const hasPass = !isEmptyBinding(env.UPLOAD_BASIC_PASS);
+  const { pairs, hasUser, hasPass } = getAllowedUploadCredentials(env);
 
-  if (!hasUser && !hasPass) {
+  if (pairs.length === 0) {
+    // No credentials configured -> uploads stay public, unless the legacy
+    // single-pair binding is half-set (misconfiguration).
+    if (hasUser !== hasPass) {
+      return jsonResponse(
+        { error: 'UPLOAD_BASIC_USER 和 UPLOAD_BASIC_PASS 必须同时配置，或填写 UPLOAD_BASIC_CREDENTIALS 才能启用上传保护' },
+        { status: 500 }
+      );
+    }
     return null;
-  }
-
-  if (!hasUser || !hasPass) {
-    return jsonResponse(
-      { error: 'UPLOAD_BASIC_USER 和 UPLOAD_BASIC_PASS 必须同时配置才能启用上传保护' },
-      { status: 500 }
-    );
   }
 
   if (!request.headers.has('Authorization')) {
@@ -90,7 +113,33 @@ export function authenticateUploadJson(request, env) {
     return jsonResponse({ error: 'Authorization 格式错误' }, { status: 400 });
   }
 
-  if (env.UPLOAD_BASIC_USER !== credentials.user || env.UPLOAD_BASIC_PASS !== credentials.pass) {
+  const ok = pairs.some(p => p.user === credentials.user && p.pass === credentials.pass);
+  if (!ok) {
+    return jsonResponse({ error: '用户名或密码错误' }, { status: 401 });
+  }
+
+  return null;
+}
+
+// JSON variant for the dashboard (admin) endpoint, mirroring
+// authenticateUploadJson. Returns null when allowed (or dashboard auth is
+// disabled), or a JSON Response WITHOUT the WWW-Authenticate header on failure
+// so the browser never shows its native Basic Auth prompt.
+export function authenticateDashboardJson(request, env) {
+  if (isEmptyBinding(env.BASIC_USER)) {
+    return null;
+  }
+
+  if (!request.headers.has('Authorization')) {
+    return jsonResponse({ error: '需要登录后才能访问后台', code: 'AUTH_REQUIRED' }, { status: 401 });
+  }
+
+  const credentials = basicAuthentication(request);
+  if (credentials instanceof Response) {
+    return jsonResponse({ error: 'Authorization 格式错误' }, { status: 400 });
+  }
+
+  if (env.BASIC_USER !== credentials.user || env.BASIC_PASS !== credentials.pass) {
     return jsonResponse({ error: '用户名或密码错误' }, { status: 401 });
   }
 

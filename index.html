@@ -333,6 +333,7 @@ footer a:hover { opacity: .75; }
   var activeUploads = 0;
   var pending = [];
   var currentFormat = 'url';
+  var uploadRequiresAuth = false;   // set from /api/config; gate the upload picker on click
 
   var dropzone = document.getElementById('dropzone');
   var fileInput = document.getElementById('file-input');
@@ -389,10 +390,9 @@ footer a:hover { opacity: .75; }
       if (adminLink) adminLink.remove();
     }
     renderSetupProblems(config.problems);
-    // If the backend requires upload credentials and none are stored, go to the dedicated login page.
-    if (config.uploadRequiresAuth && !getStoredAuth()) {
-      location.replace('/login.html');
-    }
+    // Remember whether uploads need a password; we only redirect when the user
+    // actually tries to upload, not on page load.
+    uploadRequiresAuth = !!config.uploadRequiresAuth;
   }).catch(function () { /* defaults already in markup */ });
 
   // Show deployment problems (missing bindings/variables) instead of letting the
@@ -414,12 +414,20 @@ footer a:hover { opacity: .75; }
   }
 
   // ---- input wiring: click / drag / paste ----
-  dropzone.addEventListener('click', function () { fileInput.click(); });
+  dropzone.addEventListener('click', function () {
+    if (redirectToUploadLogin()) return;   // not logged in -> go to login page
+    fileInput.click();
+  });
   dropzone.addEventListener('keydown', function (event) {
-    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (redirectToUploadLogin()) return;
+      fileInput.click();
+    }
   });
   document.getElementById('pick').addEventListener('click', function (event) {
     event.stopPropagation();   // the card itself already opens the picker
+    if (redirectToUploadLogin()) return;
     fileInput.click();
   });
   fileInput.addEventListener('change', function () {
@@ -699,6 +707,16 @@ footer a:hover { opacity: .75; }
       if (value) localStorage.setItem(UPLOAD_AUTH_KEY, value);
       else localStorage.removeItem(UPLOAD_AUTH_KEY);
     } catch (e) {}
+  }
+  // Gate the upload picker: if the backend requires a password and the visitor
+  // isn't logged in, send them to the dedicated login page instead of opening
+  // the file dialog. Returns true when it redirected.
+  function redirectToUploadLogin() {
+    if (uploadRequiresAuth && !getStoredAuth()) {
+      location.replace('/login.html');
+      return true;
+    }
+    return false;
   }
 })();
 </script>

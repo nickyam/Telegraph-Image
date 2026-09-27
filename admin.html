@@ -20,7 +20,46 @@
       margin: 0;
     }
   </style>
-  <script src="https://js.sentry-cdn.com/219f636ac7bde5edab2c3e16885cb535.min.js" crossorigin="anonymous"></script>
+  <script>
+  (function () {
+    'use strict';
+    var KEY = 'ymy_admin_auth';
+    var UPLOAD_KEY = 'ymy_upload_auth';
+    var stored = null;
+    var uploadStored = null;
+    try { stored = localStorage.getItem(KEY); } catch (e) {}
+    try { uploadStored = localStorage.getItem(UPLOAD_KEY); } catch (e) {}
+    function toLogin() {
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      window.location.replace('/admin-login.html');
+    }
+    window.__adminToLogin = toLogin;
+    if (typeof window.fetch === 'function') {
+      var realFetch = window.fetch.bind(window);
+      window.fetch = function (input, init) {
+        var url = (typeof input === 'string') ? input : (input && input.url) || '';
+        var isManage = url.indexOf('api/manage/') !== -1;
+        var isUpload = url.indexOf('/upload') !== -1;
+        init = init || {};
+        var cred = isManage ? stored : (isUpload ? uploadStored : null);
+        if (cred) {
+          var h = init.headers;
+          if (!h) {
+            init.headers = { 'Authorization': cred };
+          } else if (typeof Headers !== 'undefined' && h instanceof Headers) {
+            if (!h.has('Authorization')) h.set('Authorization', cred);
+          } else if (!('Authorization' in h)) {
+            h['Authorization'] = cred;
+          }
+        }
+        return realFetch(input, init).then(function (resp) {
+          if (isManage && resp.status === 401) { toLogin(); }
+          return resp;
+        });
+      };
+    }
+  })();
+  </script>
 </head>
 
 <body>
@@ -206,7 +245,8 @@
 
       },
       handleLogout() {
-        window.location.href = "./api/manage/logout";
+        try { localStorage.removeItem('ymy_admin_auth'); } catch (e) {}
+        window.location.href = "/admin-login.html";
       },
       handleCopy(index, key) {
         const row = this.tableData.find(item => item.name === key);
@@ -294,7 +334,7 @@
 
           }
           else {
-            window.location.href = "./api/manage/login";
+            window.location.href = "/admin-login.html";
           }
         })
         .catch(error => { alert("An error occurred while synchronizing data with the server, please check the network connection"); console.log('error', error) });
@@ -320,7 +360,7 @@
         .then(response => {
           if (response.status == 401) {
             alert("请先登录");
-            window.location.href = "./api/manage/login";
+            window.location.href = "/admin-login.html";
           }
           else {
             return response;
