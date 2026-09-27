@@ -9,8 +9,8 @@ export async function onRequestGet(context) {
     const setup = getSetupStatus(env);
 
     return jsonResponse({
-        siteName: env.SITE_NAME || 'Telegraph-Image',
-        siteTitle: env.SITE_TITLE || env.SITE_NAME || 'Telegraph-Image | 免费图床',
+        siteName: env.SITE_NAME || '涯木云',
+        siteTitle: env.SITE_TITLE || env.SITE_NAME || '涯木云',
         backgroundImage: env.SITE_BACKGROUND || '',
         enableShortUrls: isShortUrlsEnabled(env),
         uploadRequiresAuth: !isEmptyBinding(env.UPLOAD_BASIC_USER) && !isEmptyBinding(env.UPLOAD_BASIC_PASS),

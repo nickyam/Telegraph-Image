@@ -1,9 +1,19 @@
 import sentryPlugin from "@cloudflare/pages-plugin-sentry";
 import '@sentry/tracing';
 
+// Telemetry (Sentry) is OFF by default. It only runs when explicitly opted in
+// via ENABLE_TELEMETRY=true. The previous default shipped telemetry ON and
+// pointed at the upstream author's Sentry project; we no longer report by
+// default and never send to a hardcoded third-party DSN.
+function telemetryEnabled(env) {
+  if (env.ENABLE_TELEMETRY === 'true') return true;   // explicit opt-in
+  if (env.disable_telemetry === 'true') return false; // explicit opt-out
+  return false;                                        // default: off
+}
+
 export async function errorHandling(context) {
   const env = context.env;
-  if (typeof env.disable_telemetry == "undefined" || env.disable_telemetry == null || env.disable_telemetry == "") {
+  if (telemetryEnabled(env)) {
     context.data.telemetry = true;
     let remoteSampleRate = 0.001;
     try {
@@ -16,17 +26,22 @@ export async function errorHandling(context) {
     } catch (e) { console.log(e) }
     const sampleRate = env.sampleRate || remoteSampleRate;
     console.log("sampleRate", sampleRate);
+    const dsn = env.SENTRY_DSN;
+    if (!dsn) {
+      // Opted in but no DSN configured: skip rather than report to a default.
+      return context.next();
+    }
     return sentryPlugin({
-      dsn: "https://219f636ac7bde5edab2c3e16885cb535@o4507041519108096.ingest.us.sentry.io/4507541492727808",
+      dsn,
       tracesSampleRate: sampleRate,
-    })(context);;
+    })(context);
   }
   return context.next();
 }
 
 export function telemetryData(context) {
   const env = context.env;
-  if (typeof env.disable_telemetry == "undefined" || env.disable_telemetry == null || env.disable_telemetry == "") {
+  if (telemetryEnabled(env)) {
     try {
       const parsedHeaders = {};
       context.request.headers.forEach((value, key) => {
@@ -93,8 +108,9 @@ export async function traceData(context, span, op, name) {
 
 async function fetchSampleRate(context) {
   const data = context.data
-  if (data.telemetry) {
-    const url = "https://frozen-sentinel.pages.dev/signal/sampleRate.json";
+  // Only reach out to a samplerate endpoint you control (env-provided).
+  if (data.telemetry && context.env.SENTRY_SAMPLERATE_URL) {
+    const url = context.env.SENTRY_SAMPLERATE_URL;
     const response = await fetch(url);
     const json = await response.json();
     return json.rate;

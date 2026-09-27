@@ -1,7 +1,7 @@
 import { isEmptyBinding, jsonResponse, textResponse } from './http.js';
 
 export const DASHBOARD_DISABLED_MESSAGE = 'Dashboard is disabled. Please bind a KV namespace to use this feature.';
-export const BASIC_AUTH_CHALLENGE = 'Basic realm="my scope", charset="UTF-8"';
+export const BASIC_AUTH_CHALLENGE = 'Basic realm="需要密码请联系 me@nickyam.com", charset="UTF-8"';
 
 export function basicAuthentication(request) {
   const authorization = request.headers.get('Authorization') || '';
