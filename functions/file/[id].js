@@ -51,7 +51,7 @@ export async function onRequest(context) {
         return withFileHeaders(response, fileId);
     } else if (isBlocked(metadata)) {
         const referer = request.headers.get('Referer');
-        const redirectUrl = referer ? "https://static-res.pages.dev/teleimage/img-block-compressed.png" : `${url.origin}/block-img.html`;
+        const redirectUrl = referer ? `${url.origin}/img-block-compressed.png` : `${url.origin}/block-img.html`;
         return Response.redirect(redirectUrl, 302);
     }
 

@@ -62,7 +62,11 @@ function plainTextHeaders(reason) {
   };
 }
 
-export function authenticateUploadRequest(request, env) {
+// JSON variant used by the upload endpoint so the frontend can render a custom
+// login form instead of the browser's native Basic Auth dialog. Returns null
+// when allowed, or a JSON Response (without the WWW-Authenticate header) on
+// failure so no native prompt is triggered.
+export function authenticateUploadJson(request, env) {
   const hasUser = !isEmptyBinding(env.UPLOAD_BASIC_USER);
   const hasPass = !isEmptyBinding(env.UPLOAD_BASIC_PASS);
 
@@ -72,22 +76,22 @@ export function authenticateUploadRequest(request, env) {
 
   if (!hasUser || !hasPass) {
     return jsonResponse(
-      { error: 'UPLOAD_BASIC_USER and UPLOAD_BASIC_PASS must both be configured to protect uploads' },
+      { error: 'UPLOAD_BASIC_USER 和 UPLOAD_BASIC_PASS 必须同时配置才能启用上传保护' },
       { status: 500 }
     );
   }
 
   if (!request.headers.has('Authorization')) {
-    return basicAuthChallengeResponse();
+    return jsonResponse({ error: '需要登录后才能上传', code: 'AUTH_REQUIRED' }, { status: 401 });
   }
 
   const credentials = basicAuthentication(request);
   if (credentials instanceof Response) {
-    return credentials;
+    return jsonResponse({ error: 'Authorization 格式错误' }, { status: 400 });
   }
 
   if (env.UPLOAD_BASIC_USER !== credentials.user || env.UPLOAD_BASIC_PASS !== credentials.pass) {
-    return unauthorizedResponse('Invalid upload credentials.');
+    return jsonResponse({ error: '用户名或密码错误' }, { status: 401 });
   }
 
   return null;

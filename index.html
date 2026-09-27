@@ -78,9 +78,13 @@ body {
 .topbar a:active { transform: translateY(1px); }
 .icon { width: 14px; height: 14px; flex: none; display: block; }
 .brand {
-  color: #fff; text-align: center; font-size: 23px; font-weight: 800;
-  letter-spacing: .4px; padding: 26px 0 14px; margin: 0;
-  text-shadow: 0 1px 14px rgba(0, 0, 0, .28);
+  color: #fff; text-align: center;
+  font-size: clamp(40px, 7vw, 60px); font-weight: 800;
+  letter-spacing: 3px; padding: 32px 0 18px; margin: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #cfe6ff 55%, #9cc8ff 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 16px rgba(0, 0, 0, .35));
 }
 .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 footer { text-align: center; font-size: 12px; color: rgba(255, 255, 255, .85); padding-top: 26px; }
@@ -252,9 +256,29 @@ footer a:hover { opacity: .75; }
 /* ---- narrow screens: stack the two columns ---- */
 @media (max-width: 760px) {
   .page { padding: 20px 16px; }
-  .brand { font-size: 22px; padding: 20px 0 10px; }
+  .brand { font-size: clamp(34px, 9vw, 46px); padding: 22px 0 12px; }
   .board { flex-direction: column; max-width: 420px; }
   .uploader { width: 100%; }
+
+  /* ---- custom upload login modal ---- */
+  .modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+    background: rgba(9, 13, 24, .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .modal[hidden] { display: none; }
+  .modal-card { width: min(360px, 90vw); background: #fff; border-radius: 16px; padding: 28px 26px;
+    box-shadow: var(--card-shadow); }
+  .modal-card h2 { margin: 0 0 6px; font-size: 20px; color: var(--ink); }
+  .modal-sub { margin: 0 0 20px; font-size: 13px; line-height: 1.6; color: var(--body); }
+  .modal-sub a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .modal-sub a:hover { text-decoration: underline; }
+  .modal label { display: block; font-size: 13px; color: var(--body); margin-bottom: 14px; }
+  .modal input { display: block; width: 100%; margin-top: 7px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 9px; font-size: 14px; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s; }
+  .modal input:focus { outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft); }
+  .modal .btn { width: 100%; justify-content: center; margin-top: 2px; }
+  .login-error { color: var(--err); font-size: 13px; margin: 12px 0 0; }
+  .login-error[hidden] { display: none; }
   .uploader .inner { min-height: 0; padding: 26px 20px; }
   #queue { max-height: 200px; }
 }
@@ -316,6 +340,19 @@ footer a:hover { opacity: .75; }
     <a href="/index-nuxt.html">旧版界面</a>
   </footer>
 </div>
+<div id="login-modal" class="modal" hidden>
+  <div class="modal-card">
+    <h2>登录后上传</h2>
+    <p class="modal-sub">该图床需要密码才能上传。还没有密码？请联系 <a href="mailto:me@nickyam.com">me@nickyam.com</a> 获取。</p>
+    <form id="login-form">
+      <label>用户名<input type="text" id="login-user" autocomplete="username" required></label>
+      <label>密码<input type="password" id="login-pass" autocomplete="current-password" required></label>
+      <button type="submit" class="btn">登录</button>
+      <p class="login-error" id="login-error" hidden></p>
+    </form>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -521,6 +558,8 @@ footer a:hover { opacity: .75; }
 
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload');
+    var auth = getStoredAuth();
+    if (auth) xhr.setRequestHeader('Authorization', auth);
 
     xhr.upload.onprogress = function (event) {
       if (event.lengthComputable) {
@@ -531,6 +570,14 @@ footer a:hover { opacity: .75; }
     };
 
     xhr.onload = function () {
+      if (xhr.status === 401) {
+        setStoredAuth(null);
+        openLogin(file);
+        activeUploads--;
+        pumpQueue();
+        return;
+      }
+
       var src = null;
       var errorMessage = null;
       try {
@@ -673,6 +720,73 @@ footer a:hover { opacity: .75; }
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   }
+
+  // ---- custom upload login (replaces the browser's native Basic Auth dialog) ----
+  var UPLOAD_AUTH_KEY = 'ymy_upload_auth';
+  var loginModal = document.getElementById('login-modal');
+  var loginForm = document.getElementById('login-form');
+  var loginUser = document.getElementById('login-user');
+  var loginPass = document.getElementById('login-pass');
+  var loginError = document.getElementById('login-error');
+  var loginRetryFiles = [];
+
+  function getStoredAuth() {
+    try { return localStorage.getItem(UPLOAD_AUTH_KEY); } catch (e) { return null; }
+  }
+  function setStoredAuth(value) {
+    try {
+      if (value) localStorage.setItem(UPLOAD_AUTH_KEY, value);
+      else localStorage.removeItem(UPLOAD_AUTH_KEY);
+    } catch (e) {}
+  }
+  function openLogin(file) {
+    if (file) loginRetryFiles.push(file);
+    loginError.hidden = true;
+    loginModal.hidden = false;
+    setTimeout(function () { loginUser.focus(); }, 40);
+  }
+  function closeLogin() {
+    loginModal.hidden = true;
+  }
+
+  loginModal.addEventListener('click', function (e) {
+    if (e.target === loginModal) closeLogin();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !loginModal.hidden) closeLogin();
+  });
+
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var user = loginUser.value.trim();
+    var pass = loginPass.value;
+    if (!user || !pass) return;
+    var auth = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + pass)));
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/auth-check');
+    xhr.setRequestHeader('Authorization', auth);
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        setStoredAuth(auth);
+        closeLogin();
+        if (loginRetryFiles.length) {
+          var files = loginRetryFiles.slice();
+          loginRetryFiles = [];
+          enqueueFiles(files);
+        }
+      } else {
+        var msg = '用户名或密码错误';
+        try { var d = JSON.parse(xhr.responseText); if (d && d.error) msg = d.error; } catch (err) {}
+        loginError.textContent = msg;
+        loginError.hidden = false;
+      }
+    };
+    xhr.onerror = function () {
+      loginError.textContent = '网络错误，请稍后重试';
+      loginError.hidden = false;
+    };
+    xhr.send();
+  });
 })();
 </script>
 </body>
