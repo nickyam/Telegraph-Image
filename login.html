@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="涯木云 - 登录后上传">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<title>登录 - 涯木云</title>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7114121088728794" crossorigin="anonymous"></script>
+<style>
+:root {
+  --accent: #0297f8;
+  --accent-soft: rgba(2, 151, 248, .1);
+  --ink: #3d4a5c;
+  --body: #5e6878;
+  --muted: #9aa5b4;
+  --line: #eef1f4;
+  --err: #e5484d;
+  --card-shadow: 0 0 32px 0 rgba(12, 12, 13, .1), 0 2px 16px 0 rgba(12, 12, 13, .05);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  color: var(--body);
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(160deg, #1b2440 0%, #35406b 45%, #6f5878 75%, #b3766a 100%);
+}
+#backdrop { position: fixed; inset: 0; z-index: -2; overflow: hidden; }
+#backdrop figure {
+  position: absolute; inset: 0; margin: 0;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  opacity: 0; will-change: opacity;
+  animation: wallpaper 30s linear infinite;
+  backface-visibility: hidden;
+}
+@keyframes wallpaper {
+  0%   { opacity: 0 }
+  3%   { opacity: 1 }
+  20%  { opacity: 1 }
+  28%  { opacity: 0 }
+  100% { opacity: 0 }
+}
+#tint {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(240deg, rgba(150, 50, 50, .3), rgba(0, 0, 200, 0));
+}
+.page {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 30px;
+}
+.brand {
+  color: #fff; text-align: center;
+  font-size: clamp(40px, 7vw, 60px); font-weight: 800;
+  letter-spacing: 3px; padding: 0 0 28px; margin: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #cfe6ff 55%, #9cc8ff 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 16px rgba(0, 0, 0, .35));
+}
+.card {
+  width: 100%; max-width: 380px; background: #fff;
+  border-radius: 16px; padding: 32px 28px;
+  box-shadow: var(--card-shadow);
+}
+.card h1 {
+  margin: 0 0 6px; font-size: 22px; color: var(--ink); text-align: center;
+}
+.sub {
+  margin: 0 0 24px; font-size: 13px; line-height: 1.7; color: var(--body); text-align: center;
+}
+.sub a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.sub a:hover { text-decoration: underline; }
+label {
+  display: block; font-size: 13px; color: var(--body); margin-bottom: 16px;
+}
+input {
+  display: block; width: 100%; margin-top: 7px; padding: 11px 13px;
+  border: 1px solid var(--line); border-radius: 10px; font-size: 15px; color: var(--ink);
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; border: 0; border-radius: 40px; background: var(--accent); color: #fff;
+  font: 700 15px/1 inherit; font-family: inherit; padding: 12px 24px; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(2, 96, 160, .18), 0 4px 12px rgba(2, 151, 248, .22);
+  transition: background-color .16s, transform .12s, box-shadow .16s;
+}
+.btn:hover { background: #1ea3fa; box-shadow: 0 2px 4px rgba(2, 96, 160, .2), 0 6px 18px rgba(2, 151, 248, .3); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .65; cursor: wait; }
+.error {
+  margin: 14px 0 0; color: var(--err); font-size: 13px; text-align: center;
+}
+.error[hidden] { display: none; }
+.back {
+  display: block; text-align: center; margin-top: 18px; font-size: 13px;
+  color: rgba(255, 255, 255, .85); text-decoration: none;
+}
+.back:hover { color: #fff; }
+@media (max-width: 420px) {
+  .page { padding: 22px 18px; }
+  .card { padding: 26px 22px; }
+}
+</style>
+</head>
+<body>
+<div id="backdrop" aria-hidden="true"></div>
+<div id="tint" aria-hidden="true"></div>
+<div class="page">
+  <h2 class="brand">涯木云</h2>
+  <div class="card">
+    <h1>登录后上传</h1>
+    <p class="sub">该图床需要密码才能上传。<br>还没有密码？请联系 <a href="mailto:me@nickyam.com">me@nickyam.com</a> 获取。</p>
+    <form id="login-form">
+      <label>用户名<input type="text" id="login-user" autocomplete="username" placeholder="用户名" required></label>
+      <label>密码<input type="password" id="login-pass" autocomplete="current-password" placeholder="密码" required></label>
+      <button type="submit" class="btn" id="login-btn">登录</button>
+      <p class="error" id="login-error" hidden></p>
+    </form>
+  </div>
+  <a class="back" href="/">← 返回首页</a>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var UPLOAD_AUTH_KEY = 'ymy_upload_auth';
+
+  function setStoredAuth(value) {
+    try {
+      if (value) localStorage.setItem(UPLOAD_AUTH_KEY, value);
+      else localStorage.removeItem(UPLOAD_AUTH_KEY);
+    } catch (e) {}
+  }
+
+  // Optional: same wallpaper as the homepage
+  fetch('/api/bing/wallpaper').then(function (res) {
+    if (!res.ok) throw new Error('wallpaper unavailable');
+    return res.json();
+  }).then(function (payload) {
+    var images = (payload && payload.data) || [];
+    if (!images.length) return;
+    var backdrop = document.getElementById('backdrop');
+    images.slice(0, 5).forEach(function (image, index) {
+      if (!image || !image.url) return;
+      var figure = document.createElement('figure');
+      var url = /^https?:/.test(image.url) ? image.url : 'https://cn.bing.com' + image.url;
+      figure.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+      figure.style.animationDelay = (index * 6) + 's';
+      backdrop.appendChild(figure);
+    });
+  }).catch(function () { /* gradient fallback */ });
+
+  var form = document.getElementById('login-form');
+  var userInput = document.getElementById('login-user');
+  var passInput = document.getElementById('login-pass');
+  var btn = document.getElementById('login-btn');
+  var error = document.getElementById('login-error');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var user = userInput.value.trim();
+    var pass = passInput.value;
+    if (!user || !pass) return;
+
+    error.hidden = true;
+    btn.disabled = true;
+    btn.textContent = '校验中…';
+
+    var auth = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + pass)));
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/auth-check');
+    xhr.setRequestHeader('Authorization', auth);
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        setStoredAuth(auth);
+        location.replace('/');
+      } else {
+        var msg = '用户名或密码错误';
+        try { var d = JSON.parse(xhr.responseText); if (d && d.error) msg = d.error; } catch (err) {}
+        error.textContent = msg;
+        error.hidden = false;
+        btn.disabled = false;
+        btn.textContent = '登录';
+      }
+    };
+    xhr.onerror = function () {
+      error.textContent = '网络错误，请稍后重试';
+      error.hidden = false;
+      btn.disabled = false;
+      btn.textContent = '登录';
+    };
+    xhr.send();
+  });
+})();
+</script>
+</body>
+</html>
