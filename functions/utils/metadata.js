@@ -52,7 +52,13 @@ export async function getOrCreateMetadata(env, id) {
 }
 
 export async function putMetadata(env, id, metadata) {
-  await env.img_url.put(id, '', { metadata });
+  try {
+    await env.img_url.put(id, '', { metadata });
+  } catch (error) {
+    // KV writes are best-effort: a failed put (e.g. daily quota exceeded,
+    // binding unavailable) must never break the request that triggered it.
+    console.error("putMetadata failed for " + id + ": " + error.message);
+  }
 }
 
 export async function updateMetadata(env, id, updater) {

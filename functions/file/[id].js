@@ -44,7 +44,15 @@ export async function onRequest(context) {
         return withFileHeaders(response, fileId);  // Directly return image response, terminate execution
     }
 
-    const metadata = await getOrCreateMetadata(env, fileId);
+    // Metadata is best-effort: if KV is unreachable or over quota, still serve
+    // the image instead of failing the whole request.
+    let metadata;
+    try {
+        metadata = await getOrCreateMetadata(env, fileId);
+    } catch (error) {
+        console.error("Metadata load failed, serving image without metadata checks: " + error.message);
+        return withFileHeaders(response, fileId);
+    }
 
     // Handle based on ListType and Label
     if (isWhitelisted(metadata)) {
@@ -60,16 +68,18 @@ export async function onRequest(context) {
         return Response.redirect(`${url.origin}/whitelist-on.html`, 302);
     }
 
-    // If no metadata or further actions required, moderate content and add to KV if needed
+    // Moderate content and persist only when a label was actually assigned.
+    // Everything else was already persisted at upload/creation time, so
+    // re-writing it on every view just burns the KV daily put quota.
     const moderationResult = await moderateFile(env, url, fileId, metadata, response);
     if (moderationResult.blocked) {
         await putMetadata(env, fileId, metadata);
         return Response.redirect(`${url.origin}/block-img.html`, 302);
     }
 
-    // Only save metadata if content is not adult content
-    // Adult content cases are already handled above and will not reach this point
-    await putMetadata(env, fileId, metadata);
+    if (metadata.Label && metadata.Label !== LABEL.NONE) {
+        await putMetadata(env, fileId, metadata);
+    }
 
     // Return file content
     return withFileHeaders(response, fileId);
