@@ -62,8 +62,14 @@ export async function putMetadata(env, id, metadata) {
 }
 
 export async function updateMetadata(env, id, updater) {
-  const metadata = await getMetadata(env, id);
-  if (!metadata) return null;
+  // Upsert: if no metadata record exists (e.g. an orphan upload whose metadata
+  // write was dropped during a KV quota spike), create a default record first
+  // so the updater (block/whitelist) still takes effect instead of being
+  // silently skipped.
+  let metadata = await getMetadata(env, id);
+  if (!metadata) {
+    metadata = createDefaultMetadata(id);
+  }
 
   const updated = updater(metadata);
   await putMetadata(env, id, updated);
