@@ -90,6 +90,18 @@ body {
 footer { text-align: center; font-size: 12px; color: rgba(255, 255, 255, .85); padding-top: 26px; }
 footer a { color: #fff; font-weight: 700; text-decoration: none; }
 footer a:hover { opacity: .75; }
+footer .sep { margin: 0 8px; opacity: .6; }
+.terms { width: 100%; max-width: 760px; margin: 16px auto 0; text-align: left; color: rgba(255,255,255,.82); font-size: 12px; line-height: 1.75; }
+.terms summary { cursor: pointer; list-style: none; text-align: center; color: #fff; font-weight: 700; padding: 6px 0; }
+.terms summary::-webkit-details-marker { display: none; }
+.terms summary::before { content: "\25B8 "; }
+.terms[open] summary::before { content: "\25BE "; }
+.terms-body { margin-top: 8px; padding: 16px 18px; background: rgba(0,0,0,.30); border: 1px solid rgba(255,255,255,.16); border-radius: 10px; max-height: 340px; overflow: auto; }
+.terms-body h3 { margin: 0 0 10px; font-size: 15px; color: #fff; text-align: center; }
+.terms-body h4 { margin: 12px 0 4px; font-size: 13px; color: #ffd9a0; }
+.terms-body p, .terms-body li { margin: 5px 0; }
+.terms-body strong { color: #ffd9a0; }
+.terms-body a { color: #9cc8ff; }
 
 /* ---- shared card chrome ---- */
 .card {
@@ -315,9 +327,11 @@ footer a:hover { opacity: .75; }
   </div>
 
   <footer>
-    <a href="/index-nuxt.html">旧版界面</a>
+    <a href="/service.html">服务须知</a>
+    <span class="sep">·</span>
+    <a href="/privacy.html">隐私政策</a>
   </footer>
-</div>
+  </div>
 <div id="toast"></div>
 
 <script>

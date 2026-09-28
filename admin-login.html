@@ -100,6 +100,17 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   color: rgba(255, 255, 255, .85); text-decoration: none;
 }
 .back:hover { color: #fff; }
+.terms { width: 100%; max-width: 420px; margin: 18px auto 0; text-align: left; color: rgba(255,255,255,.82); font-size: 12px; line-height: 1.7; }
+.terms summary { cursor: pointer; list-style: none; text-align: center; color: #fff; font-weight: 700; padding: 6px 0; }
+.terms summary::-webkit-details-marker { display: none; }
+.terms summary::before { content: "\25B8 "; }
+.terms[open] summary::before { content: "\25BE "; }
+.terms-body { margin-top: 8px; padding: 16px 18px; background: rgba(0,0,0,.30); border: 1px solid rgba(255,255,255,.16); border-radius: 10px; max-height: 320px; overflow: auto; }
+.terms-body h3 { margin: 0 0 10px; font-size: 15px; color: #fff; text-align: center; }
+.terms-body h4 { margin: 12px 0 4px; font-size: 13px; color: #ffd9a0; }
+.terms-body p, .terms-body li { margin: 5px 0; }
+.terms-body strong { color: #ffd9a0; }
+.terms-body a { color: #9cc8ff; }
 @media (max-width: 420px) {
   .page { padding: 22px 18px; }
   .card { padding: 26px 22px; }
@@ -121,6 +132,11 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     </form>
   </div>
   <a class="back" href="/">← 返回首页</a>
+  <div style="text-align:center; margin-top:14px;">
+    <a class="back" style="display:inline; margin:0;" href="/service.html">服务须知</a>
+    <span style="color:rgba(255,255,255,.5); margin:0 6px;">·</span>
+    <a class="back" style="display:inline; margin:0;" href="/privacy.html">隐私政策</a>
+  </div>
 </div>
 
 <script>
