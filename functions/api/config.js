@@ -22,6 +22,9 @@ export async function onRequestGet(context) {
         setup: setup.checks,
         problems: setup.problems,
     }, {
-        headers: { 'Cache-Control': 'no-store' },
+        // Config is static per deploy (derived from env), so cache it at the
+        // edge. This collapses the per-page-load Function call into one miss
+        // per POP per CONFIG_CACHE_TTL window instead of one per visitor.
+        headers: { 'Cache-Control': 'public, max-age=600' },
     });
 }

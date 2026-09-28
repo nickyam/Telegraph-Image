@@ -34,8 +34,9 @@ export async function onRequestPost(context) {
         const longId = await provider.upload(env, uploadFile, { fileName, fileExtension });
         let shortId = null;
 
-    // 将文件信息保存到 KV 存储
-    if (env.img_url) {
+    // 将文件信息保存到 KV 存储。STORE_METADATA=false 时跳过全部 KV 写入，
+    // 上传路径零 KV 消耗（代价：无封禁/白名单/审图/后台管理）。默认照常写入。
+    if (env.img_url && env.STORE_METADATA !== 'false') {
       try {
         if (isShortUrlsEnabled(env)) {
           shortId = await allocateShortId(env);

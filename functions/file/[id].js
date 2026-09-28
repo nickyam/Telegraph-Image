@@ -35,13 +35,16 @@ export async function onRequest(context) {
     // Allow the admin page to directly view the image
     const isAdmin = request.headers.get('Referer')?.includes(`${url.origin}/admin`);
     if (isAdmin) {
-        return withFileHeaders(response, fileId);
+        return withFileHeaders(response, fileId, env);
     }
 
-    // Check if KV storage is available
-    if (!env.img_url) {
-        console.log("KV storage not available, returning image directly");
-        return withFileHeaders(response, fileId);  // Directly return image response, terminate execution
+    // Serve directly (no KV reads/writes) when KV is absent OR metadata
+    // persistence is disabled (STORE_METADATA=false). This is the zero-KV mode:
+    // no block/whitelist/moderation, but also no KV quota consumption on the hot
+    // path. Default (unset) keeps metadata on, preserving existing behavior.
+    if (!env.img_url || env.STORE_METADATA === 'false') {
+        console.log("KV unavailable or STORE_METADATA off, returning image directly");
+        return withFileHeaders(response, fileId, env);  // Directly return image response, terminate execution
     }
 
     // Metadata is best-effort: if KV is unreachable or over quota, still serve
@@ -51,12 +54,12 @@ export async function onRequest(context) {
         metadata = await getOrCreateMetadata(env, fileId);
     } catch (error) {
         console.error("Metadata load failed, serving image without metadata checks: " + error.message);
-        return withFileHeaders(response, fileId);
+        return withFileHeaders(response, fileId, env);
     }
 
     // Handle based on ListType and Label
     if (isWhitelisted(metadata)) {
-        return withFileHeaders(response, fileId);
+        return withFileHeaders(response, fileId, env);
     } else if (isBlocked(metadata)) {
         const referer = request.headers.get('Referer');
         const redirectUrl = referer ? `${url.origin}/img-block-compressed.png?reason=blocked` : `${url.origin}/block-img.html?reason=blocked`;
@@ -82,7 +85,7 @@ export async function onRequest(context) {
     }
 
     // Return file content
-    return withFileHeaders(response, fileId);
+    return withFileHeaders(response, fileId, env);
 }
 
 // Short ids are resolved before the file URL is built, so short links work for
@@ -162,17 +165,35 @@ async function moderateFile(env, url, fileId, metadata, response) {
     return { blocked: isBlocked(metadata) };
 }
 
-function withFileHeaders(response, filename) {
+function withFileHeaders(response, filename, env) {
     const upstreamType = response.headers.get('Content-Type') || '';
     const correctedType = isUsableContentType(upstreamType) ? null : contentTypeFromFilename(filename);
     const effectiveType = correctedType || upstreamType;
     const inline = isPreviewableContent(effectiveType) || isPreviewableFilename(filename);
 
-    if (!correctedType && !inline) {
-        return response;
+    const headers = new Headers(response.headers);
+
+    // Edge caching: a served image is immutable for a given file id, so let
+    // Cloudflare CDN cache it. Repeat viewers (and every embed of the same URL)
+    // are then served from the edge with ZERO Function invocations and ZERO KV
+    // reads — the single biggest lever against the 100k/day Functions cap.
+    // Hotlink protection still runs at the WAF layer before cache, so it is not
+    // weakened. Tune via IMG_CACHE_TTL (seconds); lower it if you block images
+    // often and need bans to propagate faster (or purge the URL in the
+    // dashboard). 0 disables caching.
+    const ttl = Math.max(0, parseInt((env && env.IMG_CACHE_TTL) || '86400', 10) || 86400);
+    if (ttl > 0) {
+        headers.set('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}`);
     }
 
-    const headers = new Headers(response.headers);
+    if (!correctedType && !inline) {
+        return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+        });
+    }
+
     if (correctedType) {
         headers.set('Content-Type', correctedType);
     }
