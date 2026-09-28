@@ -181,7 +181,7 @@ function withFileHeaders(response, filename, env) {
     // weakened. Tune via IMG_CACHE_TTL (seconds); lower it if you block images
     // often and need bans to propagate faster (or purge the URL in the
     // dashboard). 0 disables caching.
-    const ttl = Math.max(0, parseInt((env && env.IMG_CACHE_TTL) || '86400', 10) || 86400);
+    const ttl = Math.max(0, parseInt((env && env.IMG_CACHE_TTL) || '3600', 10) || 3600);
     if (ttl > 0) {
         headers.set('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}`);
     }
