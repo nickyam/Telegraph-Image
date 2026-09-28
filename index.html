@@ -91,6 +91,7 @@ footer { text-align: center; font-size: 12px; color: rgba(255, 255, 255, .85); p
 footer a { color: #fff; font-weight: 700; text-decoration: none; }
 footer a:hover { opacity: .75; }
 footer .sep { margin: 0 8px; opacity: .6; }
+footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 .terms { width: 100%; max-width: 760px; margin: 16px auto 0; text-align: left; color: rgba(255,255,255,.82); font-size: 12px; line-height: 1.75; }
 .terms summary { cursor: pointer; list-style: none; text-align: center; color: #fff; font-weight: 700; padding: 6px 0; }
 .terms summary::-webkit-details-marker { display: none; }
@@ -330,7 +331,9 @@ footer .sep { margin: 0 8px; opacity: .6; }
     <a href="/service.html">服务须知</a>
     <span class="sep">·</span>
     <a href="/privacy.html">隐私政策</a>
+    <span class="cr">&nbsp;&nbsp;© <span class="yr">2026</span> Nick Yam</span>
   </footer>
+  <script>document.querySelectorAll('.yr').forEach(function(e){e.textContent=new Date().getFullYear();});</script>
   </div>
 <div id="toast"></div>
 
