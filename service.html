@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>服务须知</title>
 <style>
-  html, body { height: 100%; margin: 0; }
+  html, body { min-height: 100%; margin: 0; }
+  html {
+    background: linear-gradient(160deg, #1b2440 0%, #35406b 45%, #6f5878 75%, #b3766a 100%) fixed;
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     color: #fff;
-    background: linear-gradient(160deg, #1b2440 0%, #35406b 45%, #6f5878 75%, #b3766a 100%);
-    min-height: 100%;
+    background: transparent;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,6 +28,7 @@
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
     margin: 4px 0 18px;
+    text-decoration: none;
   }
   .card {
     width: 100%;
@@ -54,7 +58,7 @@
 </style>
 </head>
 <body>
-  <div class="brand">涯木云</div>
+  <a class="brand" href="/">涯木云</a>
   <div class="card">
     <h1>服务须知</h1>
     <p class="meta">最后更新：2026-09-28 ｜ 联系邮箱：me@nickyam.com</p>
@@ -104,12 +108,11 @@
       <li>如某一条款被认定无效，不影响其余条款效力。</li>
     </ol>
   </div>
-  <a class="back" href="/">← 返回首页</a>
-  <div style="text-align:center; margin-top:14px; font-size:14px;">
+  <div style="text-align:center; margin-top:14px; padding-bottom:20px; font-size:14px;">
     <a class="back" style="display:inline; margin:0;" href="/service.html">服务须知</a>
     <span style="color:rgba(255,255,255,.5); margin:0 6px;">·</span>
     <a class="back" style="display:inline; margin:0;" href="/privacy.html">隐私政策</a>
-    <span style="font-size:14px; color:rgba(255,255,255,.85); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">&nbsp;&nbsp;© <span class="yr">2026</span> Nick Yam</span>
+    <span style="font-size:14px; color:rgba(255,255,255,.85); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">&nbsp;&nbsp;© <span class="yr">2026</span> <a href="https://nickyam.com" style="color:rgba(255,255,255,.85); text-decoration:none;">Nick Yam</a></span>
   </div>
   <script>document.querySelectorAll('.yr').forEach(function(e){e.textContent=new Date().getFullYear();});</script>
 </body>
