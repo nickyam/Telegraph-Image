@@ -1,6 +1,3 @@
-import sentryPlugin from "@cloudflare/pages-plugin-sentry";
-import '@sentry/tracing';
-
 // Telemetry (Sentry) is OFF by default. It only runs when explicitly opted in
 // via ENABLE_TELEMETRY=true. The previous default shipped telemetry ON and
 // pointed at the upstream author's Sentry project; we no longer report by
@@ -14,27 +11,12 @@ function telemetryEnabled(env) {
 export async function errorHandling(context) {
   const env = context.env;
   if (telemetryEnabled(env)) {
-    context.data.telemetry = true;
-    let remoteSampleRate = 0.001;
-    try {
-      const sampleRate = await fetchSampleRate(context)
-      console.log("sampleRate", sampleRate);
-      //check if the sample rate is not null
-      if (sampleRate) {
-        remoteSampleRate = sampleRate;
-      }
-    } catch (e) { console.log(e) }
-    const sampleRate = env.sampleRate || remoteSampleRate;
-    console.log("sampleRate", sampleRate);
-    const dsn = env.SENTRY_DSN;
-    if (!dsn) {
-      // Opted in but no DSN configured: skip rather than report to a default.
-      return context.next();
-    }
-    return sentryPlugin({
-      dsn,
-      tracesSampleRate: sampleRate,
-    })(context);
+    // Sentry error reporting was removed to keep the Functions build free of
+    // npm dependencies (Cloudflare Pages would otherwise have to bundle
+    // @cloudflare/pages-plugin-sentry and @sentry/tracing). To restore it:
+    // add those two packages back to package.json and a static
+    // `import sentryPlugin from "@cloudflare/pages-plugin-sentry"` at the top.
+    console.log("[telemetry] Sentry not bundled; skipping error reporting");
   }
   return context.next();
 }
@@ -42,6 +24,8 @@ export async function errorHandling(context) {
 export function telemetryData(context) {
   const env = context.env;
   if (telemetryEnabled(env)) {
+    // Sentry object is never populated now (package removed); skip silently.
+    if (!context.data.sentry) return context.next();
     try {
       const parsedHeaders = {};
       context.request.headers.forEach((value, key) => {
