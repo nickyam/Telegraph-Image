@@ -16,11 +16,25 @@
     height: 100%;
 ">
     <div style="display: flex;flex-direction: column;align-content: center;justify-content: center;align-items: center;height: 100%;text-align: center;">
-<div>
+<div id="msg-blocked" style="display:none">
+    抱歉，该文件已被管理员加入黑名单，无法进行加载。
+    <br>
+    Sorry, this file has been added to the administrator's blacklist and cannot be loaded.
+</div>
+<div id="msg-moderation">
     抱歉，当前图片未能通过审查，可能含有不良内容，故无法进行加载。
     <br>
     Sorry, the current image failed to pass the review and may contain undesirable content, so it cannot be loaded.
 </div>
+<script>
+    try {
+        var reason = new URLSearchParams(location.search).get('reason');
+        if (reason === 'blocked') {
+            document.getElementById('msg-blocked').style.display = '';
+            document.getElementById('msg-moderation').style.display = 'none';
+        }
+    } catch (e) {}
+</script>
 <br>
 <div>Powered By: <span><a style="
     color: cornflowerblue;"

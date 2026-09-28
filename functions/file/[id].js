@@ -59,7 +59,7 @@ export async function onRequest(context) {
         return withFileHeaders(response, fileId);
     } else if (isBlocked(metadata)) {
         const referer = request.headers.get('Referer');
-        const redirectUrl = referer ? `${url.origin}/img-block-compressed.png` : `${url.origin}/block-img.html`;
+        const redirectUrl = referer ? `${url.origin}/img-block-compressed.png?reason=blocked` : `${url.origin}/block-img.html?reason=blocked`;
         return Response.redirect(redirectUrl, 302);
     }
 
@@ -74,7 +74,7 @@ export async function onRequest(context) {
     const moderationResult = await moderateFile(env, url, fileId, metadata, response);
     if (moderationResult.blocked) {
         await putMetadata(env, fileId, metadata);
-        return Response.redirect(`${url.origin}/block-img.html`, 302);
+        return Response.redirect(`${url.origin}/block-img.html?reason=moderation`, 302);
     }
 
     if (metadata.Label && metadata.Label !== LABEL.NONE) {
