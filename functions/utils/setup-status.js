@@ -1,4 +1,5 @@
 import { isEmptyBinding } from './http.js';
+import { getAllowedUploadCredentials } from './auth.js';
 
 // Deployment self-check. Most support requests about this project are a missing
 // binding or an unset variable that only surfaces as a failed upload much later,
@@ -14,6 +15,7 @@ export function getSetupStatus(env) {
     storage,
     dashboard: env.img_url ? 'ok' : 'unbound',
     moderation: moderationStatus(env),
+    uploadAuth: getAllowedUploadCredentials(env).pairs.length > 0 ? 'password' : 'public',
   };
 
   return {
@@ -23,6 +25,7 @@ export function getSetupStatus(env) {
       storageProvider: storage.provider,
       dashboard: checks.dashboard,
       moderation: checks.moderation,
+      uploadAuth: checks.uploadAuth,
     },
     problems: problemsFor(storage, checks),
   };
@@ -100,6 +103,13 @@ function problemsFor(storage, checks) {
     problems.push({
       severity: 'info',
       message: '后台图片管理未启用：需要绑定名为 img_url 的 KV 命名空间（「设置 → 函数 → KV 命名空间绑定」）。短链接功能也依赖该绑定。',
+    });
+  }
+
+  if (checks.uploadAuth === 'public') {
+    problems.push({
+      severity: 'error',
+      message: '上传未设密码：当前任何人都可以直接上传文件。如需保护，请在 Cloudflare Pages 项目的「设置 → 环境变量」中添加 UPLOAD_BASIC_CREDENTIALS（格式 user:pass，可多个用逗号分隔），或 UPLOAD_BASIC_USER + UPLOAD_BASIC_PASS，然后重新部署。',
     });
   }
 
