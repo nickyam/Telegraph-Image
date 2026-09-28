@@ -1,5 +1,5 @@
-node_modules/.bin/*
-node_modules/.mf/*
+node_modules/
+_nuxt/
 .wrangler/*
 data/*
 data-broken/*
