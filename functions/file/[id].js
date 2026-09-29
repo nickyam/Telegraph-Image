@@ -1,6 +1,7 @@
 import {
     LABEL,
-    getOrCreateMetadata,
+    createDefaultMetadata,
+    getMetadata,
     isBlocked,
     isWhitelisted,
     putMetadata,
@@ -49,12 +50,23 @@ export async function onRequest(context) {
 
     // Metadata is best-effort: if KV is unreachable or over quota, still serve
     // the image instead of failing the whole request.
+    // CRITICAL: do NOT create a metadata record just because the file was
+    // viewed. Creating one on every first view burns the 1000/day KV put quota
+    // in minutes when a blog/crawler hits hundreds of images. Metadata is only
+    // persisted at upload time or by admin actions (block/whitelist).
     let metadata;
     try {
-        metadata = await getOrCreateMetadata(env, fileId);
+        metadata = await getMetadata(env, fileId);
     } catch (error) {
         console.error("Metadata load failed, serving image without metadata checks: " + error.message);
         return withFileHeaders(response, fileId, env);
+    }
+
+    if (!metadata) {
+        // No KV record yet (e.g. orphan upload created while KV was over quota,
+        // or a file from before metadata was introduced). Treat it as neutral
+        // without writing anything to KV on the hot path.
+        metadata = createDefaultMetadata(fileId);
     }
 
     // Handle based on ListType and Label
