@@ -10,36 +10,23 @@ on:
 
 jobs:
   sync_latest_from_upstream:
-    name: Sync latest commits from upstream repo
+    name: Mirror upstream main into upstream-mirror
     runs-on: ubuntu-latest
     if: ${{ github.event.repository.fork }}
 
     steps:
-      # Step 1: run a standard checkout action
       - name: Checkout target repo
         uses: actions/checkout@v3
 
-      # Step 2: run the sync action
-      - name: Sync upstream changes
-        id: sync
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
-        with:
-          upstream_sync_repo: cf-pages/Telegraph-Image
-          upstream_sync_branch: main
-          # 同步到 upstream-mirror，绝不碰 main。
-          # 本 fork 的 main 已做定制：中文文案、零 KV 写入、/file/* 30 天缓存 +
-          # 非 2xx no-store、上游只转发 Range/UA、壁纸按视口取尺寸并延后轮播。
-          # 若继续往 main 同步，上游改到同样的行就会冲突或被覆盖。镜像分支只作
-          # 参考，需要看上游改了什么时：git log main..origin/upstream-mirror
-          target_sync_branch: upstream-mirror
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # automatically generated, no need to set
-
-          # Set test_mode true to run tests instead of the true action!!
-          test_mode: false
-
-      - name: Sync check
-        if: failure()
+      # 只把上游 cf-pages/Telegraph-Image 的 main 镜像到 upstream-mirror 分支，
+      # 供对照，绝不合并进本仓库的 main（main 已做大量定制：中文文案、零 KV
+      # 写入、/file/* 30 天缓存 + 非 2xx no-store、上游只转发 Range/UA、壁纸按
+      # 视口取尺寸、内链去 .html）。
+      # 用 --force 直接覆盖，不做 merge：原 aormsby/Fork-Sync action 是 git pull
+      # 合并，一旦上游改到我们定制过的行就会冲突；而且它 git checkout
+      # <目标分支> 时本地没有该分支会直接报 pathspec 错误。
+      - name: Mirror upstream main to upstream-mirror
         run: |
-          echo "[Error] 由于上游仓库的 workflow 文件变更，导致 GitHub 自动暂停了本次自动更新，你需要手动 Sync Fork 一次，详细教程请查看项目README.md "
-          echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork. Please refer to the project README.md for instructions. "
-          exit 1
+          git remote add upstream https://github.com/cf-pages/Telegraph-Image.git
+          git fetch upstream main
+          git push --force origin "refs/remotes/upstream/main:refs/heads/upstream-mirror"
