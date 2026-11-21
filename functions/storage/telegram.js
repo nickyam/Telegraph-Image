@@ -33,9 +33,19 @@ export const telegramProvider = {
 
     async fetchFile(env, request, url, fileId) {
         const fileUrl = await resolveFileUrl(env, url, fileId);
+        // Forward only what actually affects file delivery. Passing the client's
+        // whole header set upstream leaked Referer/Cookie/Authorization to
+        // telegra.ph and api.telegram.org, and forwarding conditional headers
+        // (If-None-Match) let upstream answer 304 without cache headers of its
+        // own. Range is kept so video/audio seeking still works.
+        const upstreamHeaders = {};
+        for (const name of ['range', 'if-range', 'accept', 'user-agent']) {
+            const value = request.headers.get(name);
+            if (value) upstreamHeaders[name] = value;
+        }
         return fetch(fileUrl, {
             method: request.method,
-            headers: request.headers,
+            headers: upstreamHeaders,
             body: request.body,
         });
     },

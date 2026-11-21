@@ -106,7 +106,7 @@ describe('moderation providers', function () {
       }));
 
       assert.strictEqual(res.status, 302);
-      assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img.html');
+      assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img?reason=moderation');
       assert.strictEqual(img_url.snapshot('cat.png').metadata.Label, 'adult');
     });
 

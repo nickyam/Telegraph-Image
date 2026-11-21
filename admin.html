@@ -31,7 +31,7 @@
     try { uploadStored = localStorage.getItem(UPLOAD_KEY); } catch (e) {}
     function toLogin() {
       try { localStorage.removeItem(KEY); } catch (e) {}
-      window.location.replace('/admin-login.html');
+      window.location.replace('/admin-login');
     }
     window.__adminToLogin = toLogin;
 
@@ -115,10 +115,10 @@
      position: absolute;
      right: 0px;
       ">
-            <a href="./admin-imgtc.html">
+            <a href="/admin-imgtc">
               <el-button size="mini" type="warning">网格视图</el-button>
             </a>
-            <a href="./admin-waterfall.html">
+            <a href="/admin-waterfall">
               <el-button size="mini" type="primary">瀑布流</el-button>
             </a>
             <el-button v-if="showLogoutButton" size="mini" type="info" @click="handleLogout()">退出登录</el-button></span>
@@ -283,7 +283,7 @@
       },
       handleLogout() {
         try { localStorage.removeItem('ymy_admin_auth'); } catch (e) {}
-        window.location.href = "/admin-login.html";
+        window.location.href = "/admin-login";
       },
       handleCopy(index, key) {
         const row = this.tableData.find(item => item.name === key);
@@ -371,7 +371,7 @@
 
           }
           else {
-            window.location.href = "/admin-login.html";
+            window.location.href = "/admin-login";
           }
         })
         .catch(error => { alert("An error occurred while synchronizing data with the server, please check the network connection"); console.log('error', error) });
@@ -396,7 +396,7 @@
         //判断是否需要登录
         .then(response => {
           if (response.status == 401) {
-            window.location.href = "/admin-login.html";
+            window.location.href = "/admin-login";
           }
           else {
             return response;

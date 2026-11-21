@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="涯木云 - 免费图床">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
+<!-- The backdrop is the first thing painted; open the TLS connection early. -->
+<link rel="preconnect" href="https://cn.bing.com" crossorigin>
+<link rel="dns-prefetch" href="https://cn.bing.com">
 <title>涯木云</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7114121088728794" crossorigin="anonymous"></script>
 <style>
@@ -42,9 +45,17 @@ body {
 #backdrop figure {
   position: absolute; inset: 0; margin: 0;
   background-size: cover; background-position: center; background-repeat: no-repeat;
-  opacity: 0; will-change: opacity;
-  animation: wallpaper 30s linear infinite;
+  opacity: 1;
   backface-visibility: hidden;
+}
+/* The cross-fade only starts once the remaining pictures are actually
+   downloaded (JS adds .slideshow). The first picture stays opaque underneath as
+   a base layer, so the gaps between fades show a real photo rather than the
+   bare gradient; later pictures sit hidden until the animation drives them. */
+#backdrop figure:not(:first-child) { opacity: 0; }
+#backdrop.slideshow figure:not(:first-child) {
+  will-change: opacity;
+  animation: wallpaper 30s linear infinite;
 }
 @keyframes wallpaper {
   0%   { opacity: 0 }
@@ -58,8 +69,7 @@ body {
   background: linear-gradient(240deg, rgba(150, 50, 50, .3), rgba(0, 0, 200, 0));
 }
 @media (prefers-reduced-motion: reduce) {
-  #backdrop figure { animation: none; }
-  #backdrop figure:first-child { opacity: 1; }
+  #backdrop.slideshow figure:not(:first-child) { animation: none; opacity: 0; }
 }
 
 /* ---- page frame ---- */
@@ -281,7 +291,7 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
 
 <div class="page">
   <nav class="topbar">
-    <a href="/sponsor.html">支持网站</a>
+    <a href="/sponsor">支持网站</a>
   </nav>
 
   <h1 class="brand" id="site-name">涯木云</h1>
@@ -328,11 +338,11 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
   </div>
 
   <footer style="padding-bottom:20px;">
-    <a href="/service.html">服务须知</a>
+    <a href="/service">服务须知</a>
     <span class="sep">·</span>
-    <a href="/privacy.html">隐私政策</a>
+    <a href="/privacy">隐私政策</a>
     <span class="sep">·</span>
-    <a href="/sponsor.html">赞助本站</a>
+    <a href="/sponsor">赞助本站</a>
     <span class="cr">&nbsp;&nbsp;© <span class="yr">2026</span> <a href="https://nickyam.com" style="color:#fff; text-decoration:none;">Nick Yam</a></span>
   </footer>
   <script>document.querySelectorAll('.yr').forEach(function(e){e.textContent=new Date().getFullYear();});</script>
@@ -366,22 +376,62 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
   // ---- wallpaper slideshow ----
   // Mirrors the original homepage: five Bing pictures cross-fading on a 30s
   // cycle, 6s apart. Any failure leaves the CSS gradient in place.
+  // Bing serves the same picture at several sizes and the 1920x1080 variant is
+  // ~340KB, so five of them (1.7MB) used to be the heaviest thing on a page
+  // whose only job is one upload button. Ask for a viewport-sized variant, paint
+  // the first one right away, and queue the rest for idle time so they never
+  // compete with the form for bandwidth.
   (function loadWallpapers() {
+    var SIZE = window.matchMedia('(min-width: 900px)').matches ? '1280x720' : '960x540';
+    var backdrop = document.getElementById('backdrop');
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // urlbase is the size-less form (`/th?id=OHR.X`), so the size is ours to
+    // pick. Older payloads only carry `url`, which embeds `_1920x1080.jpg`.
+    function bingUrl(image) {
+      if (image.urlbase) return 'https://cn.bing.com' + image.urlbase + '_' + SIZE + '.jpg';
+      if (!image.url) return '';
+      var url = /^https?:/.test(image.url) ? image.url : 'https://cn.bing.com' + image.url;
+      return url.replace(/_(?:1920x1080|UHD)\.jpg/, '_' + SIZE + '.jpg');
+    }
+
+    function paint(url, index) {
+      var figure = document.createElement('figure');
+      figure.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+      figure.style.animationDelay = (index * 6) + 's';
+      backdrop.appendChild(figure);
+    }
+
+    function preload(url) {
+      return new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = img.onerror = function () { resolve(); };
+        img.src = url;
+      });
+    }
+
     fetch('/api/bing/wallpaper').then(function (res) {
       if (!res.ok) throw new Error('wallpaper unavailable');
       return res.json();
     }).then(function (payload) {
-      var images = (payload && payload.data) || [];
-      if (!images.length) return;
-      var backdrop = document.getElementById('backdrop');
-      images.slice(0, 5).forEach(function (image, index) {
-        if (!image || !image.url) return;
-        var figure = document.createElement('figure');
-        var url = /^https?:/.test(image.url) ? image.url : 'https://cn.bing.com' + image.url;
-        figure.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
-        figure.style.animationDelay = (index * 6) + 's';
-        backdrop.appendChild(figure);
-      });
+      var images = ((payload && payload.data) || []).slice(0, 5);
+      var first = images.filter(Boolean).map(bingUrl).filter(Boolean)[0];
+      if (!first) return;
+
+      paint(first, 0);
+      if (images.length < 2 || reducedMotion) return;
+
+      // Everything after the first picture waits for an idle slice (or the
+      // page's load event on browsers without requestIdleCallback).
+      var rest = images.slice(1, 5).map(bingUrl).filter(Boolean);
+      var schedule = window.requestIdleCallback || function (fn) { setTimeout(fn, 1200); };
+      schedule(function () {
+        Promise.all(rest.map(function (url, i) {
+          return preload(url).then(function () { paint(url, i + 1); });
+        })).then(function () {
+          if (backdrop.children.length > 1) backdrop.classList.add('slideshow');
+        });
+      }, { timeout: 2500 });
     }).catch(function () { /* gradient fallback already painted */ });
   })();
 
@@ -564,7 +614,7 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
     xhr.onload = function () {
       if (xhr.status === 401) {
         setStoredAuth(null);
-        location.replace('/login.html');
+        location.replace('/login');
         return;
       }
 
@@ -728,7 +778,7 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
   // the file dialog. Returns true when it redirected.
   function redirectToUploadLogin() {
     if (uploadRequiresAuth && !getStoredAuth()) {
-      location.replace('/login.html');
+      location.replace('/login');
       return true;
     }
     return false;

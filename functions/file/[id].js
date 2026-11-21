@@ -30,8 +30,13 @@ export async function onRequest(context) {
     const fileId = await resolveRequestedId(env, params.id);
     const response = await getServingProvider(fileId).fetchFile(env, request, url, fileId);
 
-    // If the response is OK, proceed with further checks
-    if (!response.ok) return response;
+    // Upstream errors (deleted file, Telegram 404/5xx, rate limiting) must NEVER
+    // be edge-cached: telegra.ph/Telegram answer 404 and 5xx with their own
+    // `Cache-Control: max-age=86400`, and passing that through made Cloudflare
+    // store a broken image for a full day on that POP — a transient Telegram
+    // hiccup then looked like permanently deleted files. Strip the cache
+    // headers and force no-store so the next request retries upstream.
+    if (!response.ok) return withoutEdgeCache(response);
 
     // Allow the admin page to directly view the image
     const isAdmin = request.headers.get('Referer')?.includes(`${url.origin}/admin`);
@@ -74,13 +79,13 @@ export async function onRequest(context) {
         return withFileHeaders(response, fileId, env);
     } else if (isBlocked(metadata)) {
         const referer = request.headers.get('Referer');
-        const redirectUrl = referer ? `${url.origin}/img-block-compressed.png?reason=blocked` : `${url.origin}/block-img.html?reason=blocked`;
+        const redirectUrl = referer ? `${url.origin}/img-block-compressed.png?reason=blocked` : `${url.origin}/block-img?reason=blocked`;
         return Response.redirect(redirectUrl, 302);
     }
 
     // Check if WhiteList_Mode is enabled
     if (env.WhiteList_Mode === "true") {
-        return Response.redirect(`${url.origin}/whitelist-on.html`, 302);
+        return Response.redirect(`${url.origin}/whitelist-on`, 302);
     }
 
     // Moderate content and persist only when a label was actually assigned.
@@ -89,7 +94,7 @@ export async function onRequest(context) {
     const moderationResult = await moderateFile(env, url, fileId, metadata, response);
     if (moderationResult.blocked) {
         await putMetadata(env, fileId, metadata);
-        return Response.redirect(`${url.origin}/block-img.html?reason=moderation`, 302);
+        return Response.redirect(`${url.origin}/block-img?reason=moderation`, 302);
     }
 
     if (metadata.Label && metadata.Label !== LABEL.NONE) {
@@ -177,6 +182,19 @@ async function moderateFile(env, url, fileId, metadata, response) {
     return { blocked: isBlocked(metadata) };
 }
 
+// Error responses: keep the status/body, drop every cache directive the
+// upstream sent, and mark the result uncacheable.
+function withoutEdgeCache(response) {
+    const headers = new Headers(response.headers);
+    ['cache-control', 'expires', 'etag', 'last-modified', 'age'].forEach(name => headers.delete(name));
+    headers.set('Cache-Control', 'no-store');
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+    });
+}
+
 function withFileHeaders(response, filename, env) {
     const upstreamType = response.headers.get('Content-Type') || '';
     const correctedType = isUsableContentType(upstreamType) ? null : contentTypeFromFilename(filename);
@@ -185,18 +203,26 @@ function withFileHeaders(response, filename, env) {
 
     const headers = new Headers(response.headers);
 
-    // Edge caching: a served image is immutable for a given file id, so let
-    // Cloudflare CDN cache it. Repeat viewers (and every embed of the same URL)
-    // are then served from the edge with ZERO Function invocations and ZERO KV
-    // reads — the single biggest lever against the 100k/day Functions cap.
+    // Edge caching: a file's content never changes for a given id (ids are
+    // random and files are immutable), so cache aggressively. Repeat viewers and
+    // every embed of the same URL are then served from the edge with ZERO
+    // Function invocations and ZERO KV reads — the single biggest lever against
+    // the 100k/day Functions cap, and the reason the first view of the day used
+    // to take seconds (that request has to pull from Telegram).
     // Hotlink protection still runs at the WAF layer before cache, so it is not
-    // weakened. Tune via IMG_CACHE_TTL (seconds); the default is 86400 (24h) to
-    // minimize Function/KV usage. Lower it if you block images often and need
-    // bans to propagate faster (or purge the URL in the dashboard). 0 disables
-    // caching.
-    const ttl = Math.max(0, parseInt((env && env.IMG_CACHE_TTL) || '86400', 10) || 86400);
+    // weakened. Tune via IMG_CACHE_TTL (seconds); the default is 2592000 (30d).
+    // Lower it if you block images often and need bans to propagate faster (or
+    // purge the URL in the dashboard / admin page). 0 disables caching.
+    // NB: parse before defaulting — `parseInt('0') || default` would silently
+    // turn the documented "0 disables caching" into the default TTL.
+    const configuredTtl = parseInt((env && env.IMG_CACHE_TTL) || '', 10);
+    const ttl = Number.isNaN(configuredTtl) ? 2592000 : Math.max(0, configuredTtl);
     if (ttl > 0) {
-        headers.set('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}`);
+        headers.set('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}, stale-while-revalidate=86400`);
+    } else {
+        // IMG_CACHE_TTL=0 means "don't cache". The upstream's own max-age would
+        // otherwise survive and still let the edge store the file.
+        headers.set('Cache-Control', 'no-store');
     }
 
     if (!correctedType && !inline) {

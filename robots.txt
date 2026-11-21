@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /login
+Disallow: /api/
+Disallow: /moderation/
+
+Sitemap: https://yun.nickyam.com/sitemap.xml

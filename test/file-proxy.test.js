@@ -184,7 +184,7 @@ describe('file proxy function', function () {
     }));
 
     assert.strictEqual(res.status, 302);
-    assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img.html');
+    assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img?reason=blocked');
   });
 
   it('runs moderation and stores the returned label for allowed files', async function () {
@@ -237,7 +237,7 @@ describe('file proxy function', function () {
     }));
 
     assert.strictEqual(res.status, 302);
-    assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img.html');
+    assert.strictEqual(res.headers.get('Location'), 'https://example.com/block-img?reason=moderation');
     assert.strictEqual(img_url.snapshot('cat.png').metadata.Label, 'adult');
   });
 
@@ -256,7 +256,7 @@ describe('file proxy function', function () {
     }));
 
     assert.strictEqual(res.status, 302);
-    assert.strictEqual(res.headers.get('Location'), 'https://example.com/whitelist-on.html');
+    assert.strictEqual(res.headers.get('Location'), 'https://example.com/whitelist-on');
   });
 
   it('returns whitelisted files inline even when whitelist mode is enabled', async function () {

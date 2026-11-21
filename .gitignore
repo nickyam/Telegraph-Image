@@ -4,3 +4,4 @@ _nuxt/
 data/*
 data-broken/*
 test/e2e/output/*
+.DS_Store
