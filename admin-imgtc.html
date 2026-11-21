@@ -19,7 +19,7 @@
     try { uploadStored = localStorage.getItem(UPLOAD_KEY); } catch (e) {}
     function toLogin() {
       try { localStorage.removeItem(KEY); } catch (e) {}
-      window.location.replace('/admin-login.html');
+      window.location.replace('/admin-login');
     }
     window.__adminToLogin = toLogin;
 
@@ -381,8 +381,8 @@
       filterOption: 'all',
       fileType: 'image',
       quickWebsites: [
-        { name: '原版后台', url: './admin.html', icon: 'fas fa-suitcase' },
-        { name: '瀑布流', url: './admin-waterfall.html', icon: 'fas fa-wind' },
+        { name: '原版后台', url: '/admin', icon: 'fas fa-suitcase' },
+        { name: '瀑布流', url: '/admin-waterfall', icon: 'fas fa-wind' },
         { name: 'Movavi', url: 'https://www.movavi.com/zh/movavi-video-converter.html', icon: 'fas fa-file-video' },
         { name: 'FreeConvert', url: 'https://www.freeconvert.com/zh/video-compressor', icon: 'fas fa-file' },
         { name: 'YouCompress', url: 'https://www.youcompress.com/zh-cn/', icon: 'fas fa-file-zipper' },
@@ -449,7 +449,7 @@
     },
     methods: {
       refreshDashboard() {location.reload();},  // 刷新页面
-      handleLogout() { try { localStorage.removeItem('ymy_admin_auth'); } catch (e) {} window.location.href = '/admin-login.html'; },  // 退出登录
+      handleLogout() { try { localStorage.removeItem('ymy_admin_auth'); } catch (e) {} window.location.href = '/admin-login'; },  // 退出登录
       handlePageChange(page) { this.currentPage = page; },  // 切换页面
         handleUpload() { this.$refs.fileInput.click(); },  // 打开文件选择对话框
         sort(command) { this.sortOption = command; },  // 切换排序方式
@@ -943,7 +943,7 @@
       this.updateWindowWidth();
       fetch("./api/manage/check", { method: 'GET', credentials: 'include' })
         .then(response => response.text())
-        .then(result => result === "true" ? this.showLogoutButton = true : window.location.href = "/admin-login.html")
+        .then(result => result === "true" ? this.showLogoutButton = true : window.location.href = "/admin-login")
         .catch(() => this.$message.error('同步数据时出错，请检查网络连接'));
 
       // 获取文件列表数据

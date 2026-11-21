@@ -305,7 +305,7 @@ July 19, 2026 - Pluggable Storage & Review, New Homepage, Anti-Hotlinking
 
 - **Image review is now pluggable**, with a new built-in provider based on Cloudflare Workers AI (bind `AI`, no external account needed) — moderatecontent.com has stopped accepting registrations and its provider is kept for legacy keys only; review verdicts are now cached per file, so each file is reviewed at most once (#203/#196/#174/#166/#85/#49)
 - **Storage is now pluggable**: `STORAGE_PROVIDER=r2` with an `img_r2` R2 bucket binding stores new uploads in Cloudflare R2, lifting the 20MB serving limit and Telegram rate limits; Telegram remains the default and old files keep loading either way (#181/#118)
-- **Rebuilt the homepage as a dependency-free single file** with batch upload, drag & drop, paste-to-upload, per-file progress, and URL/Markdown/BBCode/HTML link copying; the old Nuxt page remains at `/index-nuxt.html` (#2/#5/#51/#92/#123/#156/#194)
+- **Rebuilt the homepage as a dependency-free single file** with batch upload, drag & drop, paste-to-upload, per-file progress, and URL/Markdown/BBCode/HTML link copying (#2/#5/#51/#92/#123/#156/#194)
 - **Site customization via environment variables**: `SITE_NAME`, `SITE_TITLE`, `SITE_BACKGROUND`, `HIDE_ADMIN_ENTRY`, served to any frontend through the new `GET /api/config` endpoint (#55/#84/#107/#138/#195)
 - **Anti-hotlinking** via the `ALLOWED_REFERERS` referer allowlist, off by default and fully backward compatible (#78/#121)
 - Documented the Telegram ~20 messages/minute/channel rate limit (#245) and added a FAQ for the "Missing entry-point" deployment error (#267)

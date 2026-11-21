@@ -312,7 +312,7 @@ Hostloc @feixiang 和@乌拉擦 提供的思路和代码
 
 - **图片审查改为可插拔架构**，新增基于 Cloudflare Workers AI 的内置审查（绑定 `AI` 即可，无需任何外部账号）——moderatecontent.com 已停止注册，其对应服务仅为存量 key 保留；审查结论现在会按文件缓存，每个文件至多审查一次（#203/#196/#174/#166/#85/#49）
 - **存储改为可插拔架构**：设置 `STORAGE_PROVIDER=r2` 并绑定 `img_r2` R2 存储桶后，新上传的文件存入 Cloudflare R2，摆脱 20MB 加载上限和 Telegram 速率限制；Telegram 仍为默认后端，切换后旧文件照常加载（#181/#118）
-- **重写首页为零构建依赖的单文件页面**，支持批量上传、拖拽上传、粘贴上传、逐文件进度显示，以及 URL/Markdown/BBCode/HTML 链接一键复制；旧版 Nuxt 页面保留在 `/index-nuxt.html`（#2/#5/#51/#92/#123/#156/#194）
+- **重写首页为零构建依赖的单文件页面**，支持批量上传、拖拽上传、粘贴上传、逐文件进度显示，以及 URL/Markdown/BBCode/HTML 链接一键复制（#2/#5/#51/#92/#123/#156/#194）
 - **通过环境变量自定义站点**：`SITE_NAME`、`SITE_TITLE`、`SITE_BACKGROUND`、`HIDE_ADMIN_ENTRY`，经由新增的 `GET /api/config` 接口下发，任何自定义前端均可使用（#55/#84/#107/#138/#195）
 - **新增防盗链**：`ALLOWED_REFERERS` Referer 白名单，默认关闭、完全向后兼容（#78/#121）
 - 文档补充 Telegram 每频道约 20 条消息/分钟的速率限制说明（#245），新增"Missing entry-point"部署报错的常见问题解答（#267）

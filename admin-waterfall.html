@@ -67,7 +67,7 @@
     try { uploadStored = localStorage.getItem(UPLOAD_KEY); } catch (e) {}
     function toLogin() {
       try { localStorage.removeItem(KEY); } catch (e) {}
-      window.location.replace('/admin-login.html');
+      window.location.replace('/admin-login');
     }
     window.__adminToLogin = toLogin;
 
