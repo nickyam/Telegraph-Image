@@ -436,7 +436,10 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
   })();
 
   // ---- site config (/api/config) ----
-  fetch('/api/config').then(function (res) {
+  // Kept as a promise so upload paths can await it before deciding whether a
+  // password is required; otherwise a fast click would read the default false
+  // and slip past the login gate.
+  var configReady = fetch('/api/config').then(function (res) {
     if (!res.ok) throw new Error('config unavailable');
     return res.json();
   }).then(function (config) {
@@ -532,13 +535,23 @@ footer .cr { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe
   });
 
   // ---- upload queue ----
+  // Single choke point for every entry (picker / drag / paste). Wait for config
+  // so uploadRequiresAuth is settled, then gate BEFORE queueing any XHR: an
+  // unauthenticated visitor goes straight to /login with nothing uploaded.
   function enqueueFiles(fileList) {
-    Array.prototype.forEach.call(fileList, function (file) {
-      var item = createQueueItem(file);
-      pending.push({ file: file, item: item });
+    // Snapshot synchronously: change handler clears fileInput.value right after
+    // this call, which would otherwise empty the live FileList before the
+    // config microtask runs.
+    var files = Array.prototype.slice.call(fileList);
+    configReady.then(function () {
+      if (redirectToUploadLogin()) return;
+      files.forEach(function (file) {
+        var item = createQueueItem(file);
+        pending.push({ file: file, item: item });
+      });
+      updateCount();
+      pumpQueue();
     });
-    updateCount();
-    pumpQueue();
   }
 
   function pumpQueue() {
