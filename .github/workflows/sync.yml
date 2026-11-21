@@ -26,7 +26,12 @@ jobs:
         with:
           upstream_sync_repo: cf-pages/Telegraph-Image
           upstream_sync_branch: main
-          target_sync_branch: main
+          # 同步到 upstream-mirror，绝不碰 main。
+          # 本 fork 的 main 已做定制：中文文案、零 KV 写入、/file/* 30 天缓存 +
+          # 非 2xx no-store、上游只转发 Range/UA、壁纸按视口取尺寸并延后轮播。
+          # 若继续往 main 同步，上游改到同样的行就会冲突或被覆盖。镜像分支只作
+          # 参考，需要看上游改了什么时：git log main..origin/upstream-mirror
+          target_sync_branch: upstream-mirror
           target_repo_token: ${{ secrets.GITHUB_TOKEN }} # automatically generated, no need to set
 
           # Set test_mode true to run tests instead of the true action!!
